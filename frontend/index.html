@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CrowdChain</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div style="display: flex; justify-content: space-between; align-items: center;">
+  <h1>CrowdChain</h1>
+  <button id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
+</div>
+
+<a href="admin.html"><button>Create Campaign</button></a>
+<p>Transparent Crowdfunding Through Blockchain</p>
+
+<div id="campaignList"></div>
+
+<script src="data.js"></script>
+<script src="script.js"></script>
+<script>
+  const list = document.getElementById("campaignList");
+  getCampaigns().forEach(c => {
+    list.innerHTML += `
+      <div class="campaign">
+        <h3>${c.name}</h3>
+        <p>Goal: ${c.goal} ETH</p>
+        <p>Raised: ${c.raised} ETH</p>
+        <a href="campaign.html?id=${c.id}"><button>View Campaign</button></a>
+      </div>
+    `;
+  });
+</script>
+</body>
+</html>

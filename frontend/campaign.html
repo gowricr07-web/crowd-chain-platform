@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Campaign Details</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+  <a href="index.html">&larr; Back to Explore</a>
+  <button id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
+</div>
+
+<h1 id="campaignName"></h1>
+
+<div class="stats">
+  <p>Goal: <span id="goal"></span> ETH</p>
+  <p>Raised: <span id="raised"></span> ETH</p>
+  <p>Used: <span id="used"></span> ETH</p>
+  <p>Available: <span id="available"></span> ETH</p>
+</div>
+
+<div class="donate-box">
+  <label>Amount (ETH)</label>
+  <input type="number" id="donateAmount" value="0.5" step="0.1" min="0.01">
+  <button onclick="donate()">Donate</button>
+</div>
+
+<h2>Fund Utilization</h2>
+<div id="utilizationList"></div>
+
+<script src="data.js"></script>
+<script src="script.js"></script>
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("id");
+  const campaign = getCampaignById(id);
+
+  if (campaign) {
+    document.getElementById("campaignName").textContent = campaign.name;
+    document.getElementById("goal").textContent = campaign.goal;
+    document.getElementById("raised").textContent = campaign.raised;
+    document.getElementById("used").textContent = campaign.used;
+    document.getElementById("available").textContent = (campaign.raised - campaign.used).toFixed(2);
+
+    const utilList = document.getElementById("utilizationList");
+    campaign.utilization.forEach(u => {
+      utilList.innerHTML += `
+        <div class="campaign">
+          <p>${u.title} — ${u.amount} ETH</p>
+          <p>Status: ${u.status} ${u.status === "Approved" ? "✓" : ""}</p>
+        </div>
+      `;
+    });
+  }
+</script>
+</body>
+</html>
