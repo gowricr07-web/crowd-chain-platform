@@ -12,13 +12,13 @@
   <button id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
 </div>
 
-<h1 id="campaignName"></h1>
+<h1 id="campaignName">Connect your wallet to load this campaign</h1>
 
 <div class="stats">
-  <p>Goal: <span id="goal"></span> ETH</p>
-  <p>Raised: <span id="raised"></span> ETH</p>
-  <p>Used: <span id="used"></span> ETH</p>
-  <p>Available: <span id="available"></span> ETH</p>
+  <p>Goal: <span id="goal">-</span> ETH</p>
+  <p>Raised: <span id="raised">-</span> ETH</p>
+  <p>Used: <span id="used">-</span> ETH</p>
+  <p>Available: <span id="available">-</span> ETH</p>
 </div>
 
 <div class="donate-box">
@@ -30,21 +30,28 @@
 <h2>Fund Utilization</h2>
 <div id="utilizationList"></div>
 
-<script src="data.js"></script>
-<script src="script.js"></script>
+<!-- ethers.js library: lets our JS talk to the blockchain -->
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<script src="web3.js"></script>
 <script>
   const params = new URLSearchParams(window.location.search);
-  const id = params.get("id");
-  const campaign = getCampaignById(id);
+  const campaignId = params.get("id");
 
-  if (campaign) {
+  async function renderCampaign() {
+    const campaign = await getCampaignById(campaignId);
+    if (!campaign) {
+      document.getElementById("campaignName").textContent = "Campaign not found";
+      return;
+    }
+
     document.getElementById("campaignName").textContent = campaign.name;
     document.getElementById("goal").textContent = campaign.goal;
     document.getElementById("raised").textContent = campaign.raised;
     document.getElementById("used").textContent = campaign.used;
-    document.getElementById("available").textContent = (campaign.raised - campaign.used).toFixed(2);
+    document.getElementById("available").textContent = (campaign.raised - campaign.used).toFixed(4);
 
     const utilList = document.getElementById("utilizationList");
+    utilList.innerHTML = "";
     campaign.utilization.forEach(u => {
       utilList.innerHTML += `
         <div class="campaign">
@@ -54,6 +61,27 @@
       `;
     });
   }
+
+  async function donate() {
+    const input = document.getElementById("donateAmount");
+    const amount = parseFloat(input.value);
+    if (!amount || amount <= 0) return;
+
+    const updated = await donateToCampaign(campaignId, amount);
+    if (updated) {
+      alert(`Donated ${amount} ETH!`);
+      renderCampaign();
+    }
+  }
+
+  function onWalletConnected() {
+    renderCampaign();
+  }
+
+  window.addEventListener("DOMContentLoaded", async () => {
+    await initContract(false);
+    if (contract) renderCampaign();
+  });
 </script>
 </body>
 </html>

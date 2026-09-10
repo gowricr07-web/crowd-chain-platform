@@ -15,21 +15,43 @@
 <a href="admin.html"><button>Create Campaign</button></a>
 <p>Transparent Crowdfunding Through Blockchain</p>
 
-<div id="campaignList"></div>
+<div id="campaignList"><p>Connect your wallet to load campaigns.</p></div>
 
-<script src="data.js"></script>
-<script src="script.js"></script>
+<!-- ethers.js library: lets our JS talk to the blockchain -->
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<script src="web3.js"></script>
 <script>
-  const list = document.getElementById("campaignList");
-  getCampaigns().forEach(c => {
-    list.innerHTML += `
-      <div class="campaign">
-        <h3>${c.name}</h3>
-        <p>Goal: ${c.goal} ETH</p>
-        <p>Raised: ${c.raised} ETH</p>
-        <a href="campaign.html?id=${c.id}"><button>View Campaign</button></a>
-      </div>
-    `;
+  async function renderCampaigns() {
+    const list = document.getElementById("campaignList");
+    const campaigns = await getCampaigns();
+
+    if (campaigns.length === 0) {
+      list.innerHTML = "<p>No campaigns yet.</p>";
+      return;
+    }
+
+    list.innerHTML = "";
+    campaigns.forEach(c => {
+      list.innerHTML += `
+        <div class="campaign">
+          <h3>${c.name}</h3>
+          <p>Goal: ${c.goal} ETH</p>
+          <p>Raised: ${c.raised} ETH</p>
+          <a href="campaign.html?id=${c.id}"><button>View Campaign</button></a>
+        </div>
+      `;
+    });
+  }
+
+  // Called from web3.js after a successful wallet connection
+  function onWalletConnected() {
+    renderCampaigns();
+  }
+
+  // If the wallet was already connected on a previous visit, reconnect silently
+  window.addEventListener("DOMContentLoaded", async () => {
+    await initContract(false);
+    if (contract) renderCampaigns();
   });
 </script>
 </body>

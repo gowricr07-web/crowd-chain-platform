@@ -13,6 +13,7 @@
 </div>
 
 <h1>Create Campaign</h1>
+<p>Note: only the wallet that deployed the contract (the admin) can create campaigns.</p>
 
 <form class="admin-form" onsubmit="createCampaign(event)">
   <label>Campaign Name</label>
@@ -30,7 +31,30 @@
   <button type="submit">Create Campaign</button>
 </form>
 
-<script src="data.js"></script>
-<script src="script.js"></script>
+<!-- ethers.js library: lets our JS talk to the blockchain -->
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<script src="web3.js"></script>
+<script>
+  async function createCampaign(event) {
+    event.preventDefault();
+    const form = event.target;
+    const title = form[0].value;
+    const description = form[1].value;
+    const goal = form[2].value;
+    const organizer = form[3].value;
+
+    const success = await createCampaignOnChain(title, description, goal, organizer);
+    if (success) {
+      alert("Campaign created!");
+      form.reset();
+    }
+  }
+
+  function onWalletConnected() {}
+
+  window.addEventListener("DOMContentLoaded", async () => {
+    await initContract(false);
+  });
+</script>
 </body>
 </html>
