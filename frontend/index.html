@@ -2,45 +2,70 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CrowdChain</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div style="display: flex; justify-content: space-between; align-items: center;">
-  <h1>CrowdChain</h1>
+<div class="topbar">
+  <div class="brand">CrowdChain</div>
   <button id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
 </div>
 
-<a href="admin.html"><button>Create Campaign</button></a>
-<p>Transparent Crowdfunding Through Blockchain</p>
+<section class="hero">
+  <h1>Fund what matters.<br><span>Verify every ETH.</span></h1>
+  <p>Transparent crowdfunding through blockchain. Donations are held in escrow and released only after on-chain approval.</p>
+  <div class="hero-actions">
+    <a href="admin.html"><button>Create Campaign</button></a>
+  </div>
+</section>
 
-<div id="campaignList"><p>Connect your wallet to load campaigns.</p></div>
+<h2>Campaigns</h2>
+<div id="campaignList"><p class="empty">Connect your wallet to load campaigns.</p></div>
 
 <!-- ethers.js library: lets our JS talk to the blockchain -->
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
 <script src="web3.js"></script>
 <script>
+  // Escape on-chain text before inserting it into the page
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, ch => (
+      { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]
+    ));
+  }
+
   async function renderCampaigns() {
     const list = document.getElementById("campaignList");
     const campaigns = await getCampaigns();
 
     if (campaigns.length === 0) {
-      list.innerHTML = "<p>No campaigns yet.</p>";
+      // Don't overwrite an error message that web3.js may have just shown
+      if (!list.querySelector("p[style]")) {
+        list.innerHTML = '<p class="empty">No campaigns yet.</p>';
+      }
       return;
     }
 
-    list.innerHTML = "";
+    let html = "";
     campaigns.forEach(c => {
-      list.innerHTML += `
+      const pct = c.goal > 0 ? Math.min(100, (c.raised / c.goal) * 100) : 0;
+      html += `
         <div class="campaign">
-          <h3>${c.name}</h3>
-          <p>Goal: ${c.goal} ETH</p>
-          <p>Raised: ${c.raised} ETH</p>
+          <div class="campaign-head">
+            <h3>${esc(c.name)}</h3>
+            <span class="badge ${c.active ? "badge-active" : "badge-closed"}">${c.active ? "Active" : "Closed"}</span>
+          </div>
+          <div class="progress"><div class="progress-bar" style="width:${pct.toFixed(1)}%"></div></div>
+          <div class="campaign-meta">
+            <span><strong>${c.raised} ETH</strong> raised of ${c.goal} ETH</span>
+            <span>${pct.toFixed(0)}% funded</span>
+          </div>
           <a href="campaign.html?id=${c.id}"><button>View Campaign</button></a>
         </div>
       `;
     });
+    list.innerHTML = html;
   }
 
   // Called from web3.js after a successful wallet connection

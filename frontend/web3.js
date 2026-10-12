@@ -76,7 +76,7 @@ async function getCampaigns() {
   try {
     const count = await contract.campaignCount();
     const list = [];
-    for (let i = 1; i <= Number(count); i++) {
+    for (let i = Number(count); i >= 1 ; i--) {
       const c = await contract.campaigns(i);
       list.push({
         id: Number(c.id),
