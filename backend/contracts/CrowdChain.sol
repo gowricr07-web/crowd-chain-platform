@@ -225,7 +225,8 @@ function approveRequest(
 
     campaign.amountUtilized += request.amount;
 
-    campaign.organizer.transfer(request.amount);
+    (bool sent, ) = campaign.organizer.call{value: request.amount}("");
+    require(sent, "Transfer to organizer failed");
 }
 
 function rejectRequest(

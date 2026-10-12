@@ -14,6 +14,7 @@
 
 <h1>Create Campaign</h1>
 <p>Note: only the wallet that deployed the contract (the admin) can create campaigns.</p>
+<p id="adminWarning" style="color:#f87171; display:none;">Connect with the admin wallet to create a campaign.</p>
 
 <form class="admin-form" onsubmit="createCampaign(event)">
   <label>Campaign Name</label>
@@ -50,10 +51,29 @@
     }
   }
 
-  function onWalletConnected() {}
+  async function guardAdminForm() {
+    const form = document.querySelector(".admin-form");
+    const warning = document.getElementById("adminWarning");
+    const admin = contract ? await isAdmin() : false;
+
+    if (!admin) {
+      form.style.opacity = "0.5";
+      form.querySelectorAll("input, textarea, button").forEach(el => el.disabled = true);
+      warning.style.display = "block";
+    } else {
+      form.style.opacity = "1";
+      form.querySelectorAll("input, textarea, button").forEach(el => el.disabled = false);
+      warning.style.display = "none";
+    }
+  }
+
+  function onWalletConnected() {
+    guardAdminForm();
+  }
 
   window.addEventListener("DOMContentLoaded", async () => {
     await initContract(false);
+    await guardAdminForm();
   });
 </script>
 </body>

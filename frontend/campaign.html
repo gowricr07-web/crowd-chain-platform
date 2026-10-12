@@ -2,29 +2,47 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Campaign Details</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+<div class="topbar">
   <a href="index.html">&larr; Back to Explore</a>
   <button id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
 </div>
 
 <h1 id="campaignName">Connect your wallet to load this campaign</h1>
 
+<div class="progress-wrap">
+  <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+  <div class="progress-label">
+    <span id="progressText">&nbsp;</span>
+    <span id="progressPct"></span>
+  </div>
+</div>
+
 <div class="stats">
-  <p>Goal: <span id="goal">-</span> ETH</p>
-  <p>Raised: <span id="raised">-</span> ETH</p>
-  <p>Used: <span id="used">-</span> ETH</p>
-  <p>Available: <span id="available">-</span> ETH</p>
+  <div class="stat"><span class="stat-label">Goal</span><span class="stat-value"><span id="goal">-</span> <small>ETH</small></span></div>
+  <div class="stat"><span class="stat-label">Raised</span><span class="stat-value"><span id="raised">-</span> <small>ETH</small></span></div>
+  <div class="stat"><span class="stat-label">Used</span><span class="stat-value"><span id="used">-</span> <small>ETH</small></span></div>
+  <div class="stat"><span class="stat-label">Available</span><span class="stat-value"><span id="available">-</span> <small>ETH</small></span></div>
 </div>
 
 <div class="donate-box">
-  <label>Amount (ETH)</label>
+  <label for="donateAmount">Amount (ETH)</label>
   <input type="number" id="donateAmount" value="0.5" step="0.1" min="0.01">
   <button onclick="donate()">Donate</button>
+</div>
+
+<!-- Only shown to the campaign's organizer -->
+<div id="requestFundsBox" class="donate-box" style="display:none;">
+  <form onsubmit="handleRequestFunds(event)" style="display:flex; gap:12px; align-items:center; flex-wrap: wrap; width:100%;">
+    <input type="number" id="requestAmount" placeholder="Amount (ETH)" step="0.1" min="0.01" required>
+    <input type="text" id="requestPurpose" placeholder="Purpose" required>
+    <button type="submit">Request Funds</button>
+  </form>
 </div>
 
 <h2>Fund Utilization</h2>
@@ -36,6 +54,13 @@
 <script>
   const params = new URLSearchParams(window.location.search);
   const campaignId = params.get("id");
+
+  // Escape on-chain text before inserting it into the page
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, ch => (
+      { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]
+    ));
+  }
 
   async function renderCampaign() {
     const campaign = await getCampaignById(campaignId);
@@ -50,16 +75,45 @@
     document.getElementById("used").textContent = campaign.used;
     document.getElementById("available").textContent = (campaign.raised - campaign.used).toFixed(4);
 
+    const pct = campaign.goal > 0 ? Math.min(100, (campaign.raised / campaign.goal) * 100) : 0;
+    document.getElementById("progressBar").style.width = pct.toFixed(1) + "%";
+    document.getElementById("progressText").textContent = `${campaign.raised} of ${campaign.goal} ETH raised`;
+    document.getElementById("progressPct").textContent = pct.toFixed(0) + "% funded";
+
+    const admin = await isAdmin();
+    const myAddress = signer ? (await signer.getAddress()).toLowerCase() : null;
+    const amOrganizer = myAddress && campaign.organizer.toLowerCase() === myAddress;
+
+    document.getElementById("requestFundsBox").style.display = amOrganizer ? "flex" : "none";
+
     const utilList = document.getElementById("utilizationList");
-    utilList.innerHTML = "";
+    if (campaign.utilization.length === 0) {
+      utilList.innerHTML = '<p class="empty">No fund requests yet.</p>';
+      return;
+    }
+
+    let html = "";
     campaign.utilization.forEach(u => {
-      utilList.innerHTML += `
+      const canAct = admin && !u.approved && !u.rejected;
+      const badgeClass = u.approved ? "badge-approved" : u.rejected ? "badge-rejected" : "badge-pending";
+      const actions = canAct
+        ? `<div class="request-actions">
+             <button onclick="handleApprove(${u.index})">Approve</button>
+             <button class="btn-danger" onclick="handleReject(${u.index})">Reject</button>
+           </div>`
+        : "";
+      html += `
         <div class="campaign">
-          <p>${u.title} — ${u.amount} ETH</p>
-          <p>Status: ${u.status} ${u.status === "Approved" ? "✓" : ""}</p>
+          <div class="campaign-head">
+            <h3>${esc(u.title)}</h3>
+            <span class="badge ${badgeClass}">${u.status}</span>
+          </div>
+          <p><strong style="color:var(--text-main)">${u.amount} ETH</strong> requested</p>
+          ${actions}
         </div>
       `;
     });
+    utilList.innerHTML = html;
   }
 
   async function donate() {
@@ -72,6 +126,28 @@
       alert(`Donated ${amount} ETH!`);
       renderCampaign();
     }
+  }
+
+  async function handleRequestFunds(event) {
+    event.preventDefault();
+    const amount = document.getElementById("requestAmount").value;
+    const purpose = document.getElementById("requestPurpose").value;
+    const ok = await requestFunds(campaignId, amount, purpose);
+    if (ok) {
+      alert("Fund request submitted!");
+      event.target.reset();
+      renderCampaign();
+    }
+  }
+
+  async function handleApprove(requestIndex) {
+    const ok = await approveFundRequest(campaignId, requestIndex);
+    if (ok) renderCampaign();
+  }
+
+  async function handleReject(requestIndex) {
+    const ok = await rejectFundRequest(campaignId, requestIndex);
+    if (ok) renderCampaign();
   }
 
   function onWalletConnected() {
